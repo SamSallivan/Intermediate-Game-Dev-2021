@@ -5,6 +5,11 @@ TagManager:
   serializedVersion: 2
   tags:
   - Player_Potential
+  - land
+  - stars
+  - ice
+  - enemy
+  - Death_Collider
   layers:
   - Default
   - TransparentFX
@@ -12,9 +17,9 @@ TagManager:
   - 
   - Water
   - UI
-  - player
-  - motor
-  - plane
+  - Player
+  - Motor
+  - Plane
   - 
   - 
   - 

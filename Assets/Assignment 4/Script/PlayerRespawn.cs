@@ -7,50 +7,42 @@ public class PlayerRespawn : MonoBehaviour
 {
     Rigidbody2D myBody;
     SpriteRenderer myRenderer;
-    GameObject Manager;
+    Health health;
 
-    public bool dead = false;
     public Vector2 CheckPoint = new Vector2(-13, -5);
 
     void Start()
     {
         myRenderer = gameObject.GetComponent<SpriteRenderer>();
         myBody = gameObject.GetComponent<Rigidbody2D>();
-        Manager = GameObject.Find("Strawberry Manager");
+        health = gameObject.GetComponent<Health>();
     }
     void Update()
     {
-
-        if (dead == true)
+        if (health.dead == true)
         {
-            GetComponent<Rigidbody2D>().velocity = Vector2.zero;
-            transform.position = CheckPoint;
-            StopCoroutine(GetComponent<PlayerMovement>().DisableMovement(0));
-            StartCoroutine(GetComponent<PlayerMovement>().DisableMovement(0.5f));
-            dead = false;
+            StartCoroutine(Respawn());
         }
 
     }
-
-    private void OnTriggerEnter2D(Collider2D collision)
+    IEnumerator Respawn()
     {
-        if (collision.gameObject.name == "Strawberry")
-        {
-            Destroy(collision.gameObject);
-            Manager.GetComponent<StrawberryManage>().strawberries++;
-        }
-
-        if (collision.gameObject.name == "Fall Collider")
-        {
-            dead = true;
-        }
-
-        if (collision.gameObject.name == "Jump Pad")
-        {
-            GetComponent<PlayerMovement>().VariableJump = false;
-            GetComponent<PlayerMovement>().Jump((Vector2.up * 1.5f), true);
-        }
-
+        Color tmp = GetComponent<SpriteRenderer>().color;
+        tmp.a = 0.25f;
+        GetComponent<SpriteRenderer>().color = tmp;
+        yield return new WaitForSeconds(0.75f);
+        transform.position = CheckPoint;
+        GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+        health.invincible = true;
+        StopCoroutine(GetComponent<PlayerMovement>().DisableMovement(0));
+        StartCoroutine(GetComponent<PlayerMovement>().DisableMovement(0.5f));
+        health.dead = false;
+        health.HealthPoint = health.maxHealthPoint;
+        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1.0f);
+        tmp.a = 1.0f;
+        GetComponent<SpriteRenderer>().color = tmp;
+        health.invincible = false;
     }
 
 }

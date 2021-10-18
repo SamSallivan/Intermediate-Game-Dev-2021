@@ -6,10 +6,11 @@ TagManager:
   tags:
   - Player_Potential
   - land
-  - stars
-  - ice
   - enemy
   - Death_Collider
+  - Strawberry
+  - Hitbox
+  - Hurtbox
   layers:
   - Default
   - TransparentFX
@@ -19,7 +20,7 @@ TagManager:
   - UI
   - Player
   - Motor
-  - Plane
+  - Plain
   - 
   - 
   - 

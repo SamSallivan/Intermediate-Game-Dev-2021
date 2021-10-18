@@ -8,6 +8,7 @@ public class StrawberryManage : MonoBehaviour
     public int strawberries = 0;
 
     public TMP_Text text;
+    public TMP_Text health;
 
     void Start()
     {
@@ -29,5 +30,6 @@ public class StrawberryManage : MonoBehaviour
     void displayNum()
     {
         text.text = ("  " + strawberries + " / 5 Strawberries");
+        health.text = ("  " + GameObject.FindGameObjectWithTag("Player").GetComponent<Health>().HealthPoint + " / 10 HP");
     }
 }

@@ -8,6 +8,7 @@ public class PlayerMovement : MonoBehaviour
     public Rigidbody2D rb;
     public SpriteRenderer myRenderer;
     public LayerMask collisionLayer;
+    public GameObject hitbox;
     //[SerializeField] private Sprite[] WalkSprites;
     //[SerializeField] private Sprite[] JumpSprites;
     //[SerializeField] private Sprite[] IdleSprites;
@@ -19,6 +20,7 @@ public class PlayerMovement : MonoBehaviour
     public int currentSpriteIndex = 0;
     [Space]
     public float walkSpeed = 10;
+    public float attackLag = 0.1f;
     public float jumpForce = 10;
     public float dashSpeed = 20;
     public float dashLag = 0.1f;
@@ -37,6 +39,7 @@ public class PlayerMovement : MonoBehaviour
     [Space]
     [Header("Booleans")]
     public bool canMove = true;
+    public bool isAttacking;
     public bool isJumping;
     public bool wallJumped;
     public bool isDashing;
@@ -70,10 +73,7 @@ public class PlayerMovement : MonoBehaviour
 
         inputCheck();
 
-        if (VariableJump)
-        {
-            variableJump();
-        }
+        variableJump();
 
         timer += Time.deltaTime;
         //Debug.Log(rb.gravityScale);
@@ -100,7 +100,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void variableJump()
     {
-        if (!isDashing)
+        if (!isDashing && VariableJump)
         {
             if (rb.velocity.y < 0)
             {
@@ -127,10 +127,17 @@ public class PlayerMovement : MonoBehaviour
 
         if (onGround && !isDashing)
         {
-            //wallJumped = false;
+            wallJumped = false;
         }
 
         Walk(Input.GetAxisRaw("Horizontal"));
+
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+
+            Attack();
+
+        }
 
         if (Input.GetKeyDown(KeyCode.C))
         {
@@ -277,7 +284,24 @@ public class PlayerMovement : MonoBehaviour
         }
 
     }
-    public void Jump(Vector2 dir, bool wall)
+
+    public void Attack()
+    {
+        if (!canMove || isAttacking)
+            return;
+        hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
+        hitbox.SetActive(true);
+        StartCoroutine(Attacking());
+    }
+    IEnumerator Attacking()
+    {
+        isAttacking = true;
+        yield return new WaitForSeconds(0.1f);
+        hitbox.SetActive(false);
+        yield return new WaitForSeconds(attackLag);
+        isAttacking = false;
+    }
+public void Jump(Vector2 dir, bool wall)
     {
         //if (!canMove)
             //return;
@@ -285,10 +309,6 @@ public class PlayerMovement : MonoBehaviour
         rb.velocity = new Vector2(0, 0);
         rb.velocity = dir * jumpForce;
         //StartCoroutine(Jumping());
-
-        //slideParticle.transform.parent.localScale = new Vector3(ParticleSide(), 1, 1);
-        //ParticleSystem particle = wall ? wallJumpParticle : jumpParticle;
-        //particle.Play();
     }
     IEnumerator Jumping()
     {
@@ -306,8 +326,8 @@ public class PlayerMovement : MonoBehaviour
 
         //anim.SetTrigger("dash");
 
-        GetComponent<TrailRenderer>().enabled = true;
         rb.velocity = Vector2.zero;
+        GetComponent<TrailRenderer>().enabled = true;
         rb.velocity = new Vector2(x, y) * dashSpeed;
         StartCoroutine(Dashing());
     }
@@ -339,10 +359,10 @@ public class PlayerMovement : MonoBehaviour
 
         rb.gravityScale = 0;
         if (Input.GetKey(KeyCode.UpArrow))
-            rb.velocity = new Vector2(rb.velocity.x, walkSpeed * 0.75f);
+            rb.velocity = new Vector2(rb.velocity.x, walkSpeed * 1.0f);
         else if (Input.GetKey(KeyCode.DownArrow))
             rb.velocity = new Vector2(rb.velocity.x, walkSpeed * -1.25f);
-        else if (!onGround && !isDashing)
+        else if (!onGround && !isDashing && !wallJumped)
             rb.velocity = Vector2.zero;
 
         StartCoroutine(AutoClimb());

@@ -507,7 +507,7 @@ public class PlayerMovement : MonoBehaviour
         rb.gravityScale = 0;
         yield return new WaitForSeconds(0.1f);
         //rb.velocity = new Vector2(x, y) * dashSpeed;
-        RaycastHit2D detection = Physics2D.Raycast(transform.position, new Vector2(side, 0f), dashSpeed, collisionLayer);
+        RaycastHit2D detection = Physics2D.Raycast(transform.position, new Vector2(Mathf.Sign(x), 0f), dashSpeed, collisionLayer);
         if (detection.collider)
         {
             rb.transform.position += new Vector3(x, y, 0) * (detection.distance - 1);

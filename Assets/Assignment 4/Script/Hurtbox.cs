@@ -44,7 +44,7 @@ public class Hurtbox : MonoBehaviour
                 return;
 
             owner.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
-            owner.GetComponent<Rigidbody2D>().velocity = new Vector2(Mathf.Sign(dir.x) * 30.0f, Mathf.Sign(dir.y+1) * 30.0f);
+            owner.GetComponent<Rigidbody2D>().velocity = new Vector2(Mathf.Sign(dir.x) * 15.0f, Mathf.Sign(dir.y+1) * 20.0f);
 
         }
     }

@@ -9,6 +9,9 @@ public class PlayerMovement : MonoBehaviour
     public SpriteRenderer myRenderer;
     public LayerMask collisionLayer;
     public GameObject hitbox;
+    public GameObject hitboxCharged;
+    public GameObject hurtbox;
+    public Animator animator;
     //[SerializeField] private Sprite[] WalkSprites;
     //[SerializeField] private Sprite[] JumpSprites;
     //[SerializeField] private Sprite[] IdleSprites;
@@ -21,6 +24,8 @@ public class PlayerMovement : MonoBehaviour
     [Space]
     public float walkSpeed = 10;
     public float attackLag = 0.1f;
+    public float chargeTimer = 0.0f;
+    public float comboWindow = 0.1f;
     public float jumpForce = 10;
     public float dashSpeed = 20;
     public float dashLag = 0.1f;
@@ -39,7 +44,13 @@ public class PlayerMovement : MonoBehaviour
     [Space]
     [Header("Booleans")]
     public bool canMove = true;
+    public bool attackWindow1;
+    public bool attackWindow2;
+    public bool attackWindow3;
+    public bool attackWindow4;
     public bool isAttacking;
+    public bool isCharging;
+    public bool isChargedAttacking;
     public bool isJumping;
     public bool wallJumped;
     public bool isDashing;
@@ -64,6 +75,7 @@ public class PlayerMovement : MonoBehaviour
     {
         rb = gameObject.GetComponent<Rigidbody2D>();
         myRenderer = gameObject.GetComponent<SpriteRenderer>();
+        animator = gameObject.GetComponent<Animator>();
     }
 
     // Update is called once per frame
@@ -76,13 +88,17 @@ public class PlayerMovement : MonoBehaviour
         variableJump();
 
         timer += Time.deltaTime;
-        //Debug.Log(rb.gravityScale);
+
+        if (side < 0)
+            GetComponent<SpriteRenderer>().flipX = true;
+        else
+            GetComponent<SpriteRenderer>().flipX = false;
 
     }
     private void collisionCheck()
     {
-        onGround = Physics2D.OverlapCircle((Vector2)transform.position + bottomOffset + new Vector2(0.75f, 0), collisionRadius, collisionLayer)
-            || Physics2D.OverlapCircle((Vector2)transform.position + bottomOffset + new Vector2(-0.75f, 0), collisionRadius, collisionLayer);
+        onGround = Physics2D.OverlapCircle((Vector2)transform.position + new Vector2(0, bottomOffset.y) + new Vector2(bottomOffset.x, 0), collisionRadius, collisionLayer)
+            || Physics2D.OverlapCircle((Vector2)transform.position + new Vector2(0, bottomOffset.y) - new Vector2(bottomOffset.x, 0), collisionRadius, collisionLayer);
 
         onLeftWall = Physics2D.OverlapCircle((Vector2)transform.position + leftOffset1, collisionRadius, collisionLayer)
             || Physics2D.OverlapCircle((Vector2)transform.position + leftOffset2, collisionRadius, collisionLayer);
@@ -102,13 +118,33 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!isDashing && VariableJump)
         {
-            if (rb.velocity.y < 0)
+            if (rb.velocity.y < 0 && !wallGrab)
             {
                 rb.velocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
+                if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Space))
+                {
+                    rb.gravityScale = gravityScaler * 0.25f;
+                }
+                else
+                {
+                    rb.gravityScale = gravityScaler * 0.75f;
+                }
+                if (!isAttacking && rb.velocity.y <= -1 && !onGround)
+                    Animation("Player_Fall");
             }
-            else if (rb.velocity.y > 0 && !Input.GetKey(KeyCode.C))
+            else if (rb.velocity.y > 0.1f && !wallSlide && !wallGrab)
             {
-                rb.velocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
+                if (!(Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Space)))
+                {
+                    rb.velocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
+                    if (!isAttacking && !onGround)
+                        Animation("Player_Hop");
+                }
+                else if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Space))
+                {
+                    if (!isAttacking)
+                        Animation("Player_Jet_Jump");
+                }
             }
         }
     }
@@ -132,18 +168,46 @@ public class PlayerMovement : MonoBehaviour
 
         Walk(Input.GetAxisRaw("Horizontal"));
 
-        if (Input.GetKeyDown(KeyCode.V))
+        if (Input.GetKey(KeyCode.V) || Input.GetKey(KeyCode.J))
         {
+            chargeTimer += Time.deltaTime;
+            if (chargeTimer > 0.25f)
+            {
+                isCharging = true;
+                Animation("Player_Charging");
+            }
+        }
+        if (Input.GetKeyUp(KeyCode.V) || Input.GetKeyUp(KeyCode.J))
+        {
+            if (chargeTimer <= 0.75f)
+            {
+                if (attackWindow3)
+                {
+                    Attack3();
+                }
+                else if (attackWindow2)
+                {
+                    Attack2();
+                }
+                else
+                {
+                    Attack1();
+                }
 
-            Attack();
 
+            }
+            else
+            {
+                ChargedAttack();
+            }
+            chargeTimer = 0;
+            isCharging = false;
         }
 
-        if (Input.GetKeyDown(KeyCode.C))
+        if (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.Space))
         {
-            //anim.SetTrigger("jump");
 
-            if (onGround)
+            if (onGround && !isCharging)
             {
                 Jump((Vector2.up), false);
             }
@@ -195,9 +259,12 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.X) && !hasDashed)
+        if ((Input.GetKeyDown(KeyCode.X) || Input.GetKey(KeyCode.K)) && !hasDashed)
         {
 
+            Dash(side, 0);
+
+            /*
             if (Input.GetAxisRaw("Vertical") != 0 && Input.GetAxisRaw("Horizontal") == 0)
             {
                 Dash(0, Input.GetAxisRaw("Vertical"));
@@ -214,19 +281,18 @@ public class PlayerMovement : MonoBehaviour
             {
                 Dash(side * 1.5f, Input.GetAxisRaw("Vertical"));
             }
+            */
 
         }
 
-        if (onWall && Input.GetKey(KeyCode.Z) && canMove)
+        if (onWall && (Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.LeftShift)) && canMove)
         {
-            //if (side != wallSide)
-                //anim.Flip(side * -1);
             wallGrab = true;
             wallSlide = false;
             WallGrab();
         }
 
-        if (Input.GetKeyUp(KeyCode.Z) || !onWall || !canMove)
+        if (Input.GetKeyUp(KeyCode.Z) || Input.GetKey(KeyCode.LeftShift) || !onWall || !canMove)
         {
             wallGrab = false;
             wallSlide = false;
@@ -251,15 +317,23 @@ public class PlayerMovement : MonoBehaviour
         if (wallGrab || wallSlide || !canMove)
             return;
 
-        if (Input.GetAxisRaw("Horizontal")>0)
+        //if (Input.GetAxisRaw("Horizontal")>0)
+        if (rb.velocity.x > 0.1f)
         {
-            side = 1;
-            //anim.Flip(side);
+            if (Input.GetAxisRaw("Horizontal") > 0)
+                side = 1;
+            hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
+            if (!isChargedAttacking)
+                hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
         }
-        if (Input.GetAxisRaw("Horizontal") < 0)
+        //if (Input.GetAxisRaw("Horizontal") < 0)
+        else if (rb.velocity.x < 0.1f)
         {
-            side = -1;  
-            //anim.Flip(side);
+            if (Input.GetAxisRaw("Horizontal") < 0)
+                side = -1;
+            hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
+            if (!isChargedAttacking)
+                hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
         }
 
 
@@ -273,35 +347,126 @@ public class PlayerMovement : MonoBehaviour
         if (wallGrab)
             return;
 
+        if (isCharging || isChargedAttacking)
+            return;
+
         if (!wallJumped)
         {   
             if (!(onLeftWall && dir < 0) && !(onRightWall && dir > 0))
                 rb.velocity = new Vector2(dir * walkSpeed, rb.velocity.y);
+
+            if (onGround && dir != 0 && !isAttacking && !attackWindow1 && !attackWindow2 && !attackWindow3 && !attackWindow4 && !isCharging && !isDashing)
+            {
+                Animation("Player_Run");
+            }
+            else if (onGround && dir == 0 && !isAttacking && !attackWindow1 && !attackWindow2 && !attackWindow3 && !attackWindow4 && !isCharging && !isDashing)
+            {
+                Animation("Player_Idle");
+            }
         }
         else
         {
             rb.velocity = Vector2.Lerp(rb.velocity, (new Vector2(dir * walkSpeed/2f, rb.velocity.y)), 10 * Time.deltaTime);
+
         }
 
     }
 
-    public void Attack()
+    public void Attack1()
     {
         if (!canMove || isAttacking)
             return;
+
         hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
         hitbox.SetActive(true);
-        StartCoroutine(Attacking());
+        Animation("Player_Attack_1");
+        StartCoroutine(Attacking1());
     }
-    IEnumerator Attacking()
+    IEnumerator Attacking1()
     {
         isAttacking = true;
-        yield return new WaitForSeconds(0.1f);
+        yield return new WaitForSeconds(0.25f);
         hitbox.SetActive(false);
         yield return new WaitForSeconds(attackLag);
         isAttacking = false;
+        attackWindow2 = true;
+        yield return new WaitForSeconds(comboWindow); 
+        attackWindow2 = false;
     }
-public void Jump(Vector2 dir, bool wall)
+
+    public void Attack2()
+    {
+        if (!canMove || isAttacking)
+            return;
+
+        hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
+        hitbox.SetActive(true);
+        Animation("Player_Attack_2");
+        StartCoroutine(Attacking2());
+    }
+    IEnumerator Attacking2()
+    {
+        attackWindow2 = false;
+        isAttacking = true;
+        yield return new WaitForSeconds(0.25f);
+        hitbox.SetActive(false);
+        yield return new WaitForSeconds(attackLag);
+        isAttacking = false;
+        attackWindow3 = true;
+        yield return new WaitForSeconds(comboWindow);
+        attackWindow3 = false;
+    }
+
+    public void Attack3()
+    {
+        if (!canMove || isAttacking)
+            return;
+
+        hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
+        hitbox.SetActive(true);
+        Animation("Player_Attack_3");
+        StartCoroutine(Attacking3());
+    }
+    IEnumerator Attacking3()
+    {
+        attackWindow3 = false;
+        isAttacking = true;
+        yield return new WaitForSeconds(0.25f);
+        hitbox.SetActive(false);
+        yield return new WaitForSeconds(attackLag);
+        isAttacking = false;
+        attackWindow1 = true;
+        yield return new WaitForSeconds(comboWindow + 0.25f);
+        attackWindow1 = false;
+    }
+
+    public void ChargedAttack()
+    {
+        if (!canMove || isAttacking)
+            return;
+
+        hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
+        StartCoroutine(ChargedAttacking());
+    }
+    IEnumerator ChargedAttacking()
+    {
+        yield return new WaitForSeconds(0.1f);
+        isChargedAttacking = true;
+        isAttacking = true;
+        hitboxCharged.SetActive(true);
+        Animation("Player_Attack_Charged");
+        yield return new WaitForSeconds(0.5f);
+        hitboxCharged.SetActive(false);
+        yield return new WaitForSeconds(attackLag);
+        isChargedAttacking = false;
+        isAttacking = false;
+        attackWindow4 = true;
+        yield return new WaitForSeconds(comboWindow);
+        attackWindow4 = false;
+    }
+
+
+    public void Jump(Vector2 dir, bool wall)
     {
         //if (!canMove)
             //return;
@@ -327,23 +492,36 @@ public void Jump(Vector2 dir, bool wall)
         //anim.SetTrigger("dash");
 
         rb.velocity = Vector2.zero;
-        GetComponent<TrailRenderer>().enabled = true;
-        rb.velocity = new Vector2(x, y) * dashSpeed;
-        StartCoroutine(Dashing());
+        //GetComponent<TrailRenderer>().enabled = true;
+        Animation("Player_Dash");
+        StartCoroutine(Dashing(x, y));
     }
 
-    IEnumerator Dashing()
+    IEnumerator Dashing(float x, float y)
     {
         if (onGround)
         {
             //hasDashed = false;
         }
-        rb.gravityScale = 0;
         isDashing = true;
+        rb.gravityScale = 0;
+        yield return new WaitForSeconds(0.1f);
+        //rb.velocity = new Vector2(x, y) * dashSpeed;
+        RaycastHit2D detection = Physics2D.Raycast(transform.position, new Vector2(side, 0f), dashSpeed, collisionLayer);
+        if (detection.collider)
+        {
+            rb.transform.position += new Vector3(x, y, 0) * (detection.distance - 1);
+        }
+        else
+        {
+            rb.transform.position += new Vector3(x, y, 0) * dashSpeed;
+        }
         wallJumped = true;
         yield return new WaitForSeconds(0.1f);
         rb.velocity = Vector2.zero;
-        yield return new WaitForSeconds(dashLag); 
+        rb.velocity = new Vector2(x, y) * 12.5f;
+        yield return new WaitForSeconds(dashLag);
+        rb.velocity = Vector2.zero;
         rb.gravityScale = gravityScaler;
         isDashing = false;
         wallJumped = false;
@@ -352,15 +530,15 @@ public void Jump(Vector2 dir, bool wall)
     }
     private void WallGrab()
     {
-        if (onGround && !Input.GetKey(KeyCode.DownArrow))
+        if (onGround && !(Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S)))
         {
             transform.position = new Vector3(transform.position.x, transform.position.y + 0.05f, transform.position.z);
         }
 
         rb.gravityScale = 0;
-        if (Input.GetKey(KeyCode.UpArrow))
+        if (Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W))
             rb.velocity = new Vector2(rb.velocity.x, walkSpeed * 1.0f);
-        else if (Input.GetKey(KeyCode.DownArrow))
+        else if (Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S))
             rb.velocity = new Vector2(rb.velocity.x, walkSpeed * -1.25f);
         else if (!onGround && !isDashing && !wallJumped)
             rb.velocity = Vector2.zero;
@@ -387,23 +565,23 @@ public void Jump(Vector2 dir, bool wall)
     }
     IEnumerator AutoClimb()
     {
-        if (Input.GetKey(KeyCode.UpArrow)) 
+        if (Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W)) 
         { 
             //canMove = false;
             if (onLeftWall && AutoClimableLeft)
             {
                 rb.gravityScale = 0;
-                transform.position = new Vector3(transform.position.x, transform.position.y + 0.1f, transform.position.z);
+                transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
                 yield return new WaitForSeconds(autoClimbDelay);
-                transform.position = new Vector3(transform.position.x - 0.1f, transform.position.y + 0.25f, transform.position.z);
+                transform.position = new Vector3(transform.position.x - 0.5f, transform.position.y + 0.25f, transform.position.z);
                 rb.gravityScale = gravityScaler;
             }
             if (onRightWall && AutoClimableRight)
             {
                 rb.gravityScale = 0;
-                transform.position = new Vector3(transform.position.x, transform.position.y + 0.1f, transform.position.z);
+                transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
                 yield return new WaitForSeconds(autoClimbDelay);
-                transform.position = new Vector3(transform.position.x + 0.1f, transform.position.y + 0.25f, transform.position.z);
+                transform.position = new Vector3(transform.position.x + 0.5f, transform.position.y + 0.25f, transform.position.z);
                 rb.gravityScale = gravityScaler;
             }
             //canMove = true;
@@ -423,14 +601,29 @@ public void Jump(Vector2 dir, bool wall)
         isJumping = false;
         wallJumped = false;
         VariableJump = true;
+        //attackWindow1 = true;
+    }
+
+    public void Animation(string anim)
+    {
+        if (GetComponent<Health>().dead && anim != "Player_Death")
+            return;
+
+        if (hurtbox.GetComponent<Hurtbox>().isStunned && anim != "Player_Damaged")
+            return;
+
+        if (!animator.GetCurrentAnimatorStateInfo(0).IsName(anim))
+        {
+            animator.Play(anim, 0, 0);
+        }
     }
 
     void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
         //var positions = new Vector2[] { bottomOffset, rightOffset, leftOffset };
-        Gizmos.DrawWireSphere((Vector2)transform.position + bottomOffset + new Vector2(0.75f, 0), collisionRadius);
-        Gizmos.DrawWireSphere((Vector2)transform.position + bottomOffset + new Vector2(-0.75f, 0), collisionRadius);
+        Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(0, bottomOffset.y) + new Vector2(bottomOffset.x, 0), collisionRadius);
+        Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(0, bottomOffset.y) - new Vector2(bottomOffset.x, 0), collisionRadius);
 
         Gizmos.DrawWireSphere((Vector2)transform.position + rightOffset1, collisionRadius);
         Gizmos.DrawWireSphere((Vector2)transform.position + leftOffset1, collisionRadius);
@@ -441,7 +634,17 @@ public void Jump(Vector2 dir, bool wall)
         Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(rightOffset1.x, 0) + new Vector2(0, AutoClimbHeight1), collisionRadius);
         Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(rightOffset1.x, 0) + new Vector2(0, AutoClimbHeight2), collisionRadius);
         Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(leftOffset1.x, 0) + new Vector2(0, AutoClimbHeight1), collisionRadius);
-        Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(leftOffset1.x, 0) + new Vector2(0, AutoClimbHeight2), collisionRadius);
+        Gizmos.DrawWireSphere((Vector2)transform.position + new Vector2(leftOffset1.x, 0) + new Vector2(0, AutoClimbHeight2), collisionRadius); 
+        
+        RaycastHit2D detection = Physics2D.Raycast(transform.position, new Vector2(side, 0f), dashSpeed, collisionLayer);
+        if (detection.collider)
+        {
+            Debug.DrawRay(transform.position, new Vector2(side, 0f) * dashSpeed, Color.red);
+        }
+        else
+        {
+            Debug.DrawRay(transform.position, new Vector2(side, 0f) * dashSpeed, Color.blue);
+        }
     }
 
     /*private void PlayerAnimation(Sprite[] currentSprite)

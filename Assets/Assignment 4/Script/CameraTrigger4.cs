@@ -16,7 +16,7 @@ public class CameraTrigger4 : MonoBehaviour
         {
             if (Camera.main.GetComponent<CameraMove4>().TargetRangeX == CamRangeX && Camera.main.GetComponent<CameraMove4>().TargetRangeY == CamRangeY)
             {
-                Camera.main.GetComponent<CameraMove4>().Lerp = 1500;
+                Camera.main.GetComponent<CameraMove4>().Lerp = 3000;
             }
         }
     }

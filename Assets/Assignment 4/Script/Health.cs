@@ -26,6 +26,7 @@ public class Health : MonoBehaviour
 			if (name == "Madeline")
 			{
 				GetComponent<PlayerMovement>().canMove = false;
+				GetComponent<PlayerMovement>().Animation("Player_Death");
 			}
             else
             {

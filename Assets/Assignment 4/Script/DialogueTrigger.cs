@@ -37,10 +37,23 @@ public class DialogueTrigger : MonoBehaviour
     }
     void Update()
     {
-        if (!talked && Mathf.Abs(transform.position.x - GameObject.Find("Madeline").transform.position.x) <= 2.5f)
+
+        if (Mathf.Abs(transform.position.x - GameObject.Find("Madeline").transform.position.x) <= 2.5f)
+        {
+            if (Mathf.Sign(transform.position.x - GameObject.Find("Madeline").transform.position.x) == 1)
+            {
+                GetComponent<SpriteRenderer>().flipX = true;
+            }
+            else
+            {
+                GetComponent<SpriteRenderer>().flipX = false;
+            }
+        }
+
+            if (!talked && Mathf.Abs(transform.position.x - GameObject.Find("Madeline").transform.position.x) <= 2.5f)
         {
             Interactable.GetComponent<MeshRenderer>().enabled = true;
-            Interactable.transform.position = new Vector3(transform.position.x, transform.position.y + 2, transform.position.z);
+            Interactable.transform.position = new Vector3(transform.position.x, transform.position.y + 3, transform.position.z);
         }
         else if(Mathf.Abs(transform.position.x - GameObject.Find("Madeline").transform.position.x) <= 10)
         {
@@ -54,6 +67,7 @@ public class DialogueTrigger : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Z))
             {
                 //FindObjectOfType<playerMovement>().canMove = false;
+                talked = true;
 
                 if (sentences.Count == 0)
                 {

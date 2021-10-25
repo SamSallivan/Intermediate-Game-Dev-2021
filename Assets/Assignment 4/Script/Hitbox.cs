@@ -16,9 +16,17 @@ public class Hitbox : MonoBehaviour
         }
 
         Hurtbox victim = collision.gameObject.GetComponent<Hurtbox>();
-        if (victim.hitted == false && !victim.owner.GetComponent<Health>().invincible)
+        if (victim.hitted == false && !victim.owner.GetComponent<Health>().invincible && victim.owner.GetComponent<Health>().HealthPoint > 0)
         {
-            victim.dir = victim.transform.position - transform.position;
+            if (name == "Fall Collider")
+            {
+                victim.dir = new Vector2(0, victim.transform.position.y - transform.position.y);
+            }
+            else
+            {
+                victim.dir = victim.transform.position - owner.transform.position;
+            }
+            victim.hitbox = gameObject;
             victim.hitted = true;
             victim.owner.GetComponent<Health>().HealthPoint -= damage;
         }

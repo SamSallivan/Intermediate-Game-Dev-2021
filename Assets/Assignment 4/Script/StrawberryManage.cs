@@ -21,15 +21,17 @@ public class StrawberryManage : MonoBehaviour
 
         if (strawberries >= 5)
         {
+            GameObject.Find("Theo 0/5").GetComponent<SpriteRenderer>().enabled = false;
             GameObject.Find("Theo 0/5").GetComponent<DialogueTrigger>().enabled = false;
+            GameObject.Find("Theo 5/5").GetComponent<SpriteRenderer>().enabled = true;
             GameObject.Find("Theo 5/5").GetComponent<DialogueTrigger>().enabled = true;
-            GameObject.Find("Door").GetComponent<SpriteRenderer>().enabled = false;
-            GameObject.Find("Door").GetComponent<BoxCollider2D>().enabled = false;
+            GameObject.Find("Door 5/5").GetComponent<SpriteRenderer>().enabled = false;
+            GameObject.Find("Door 5/5").GetComponent<BoxCollider2D>().enabled = false;
         }
     }
     void displayNum()
     {
-        text.text = ("  " + strawberries + " / 5 Strawberries");
+        text.text = ("  " + strawberries + " / 5 Batteries");
         health.text = ("  " + GameObject.FindGameObjectWithTag("Player").GetComponent<Health>().HealthPoint + " / 10 HP");
     }
 }

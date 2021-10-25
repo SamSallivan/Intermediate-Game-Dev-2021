@@ -292,7 +292,7 @@ public class PlayerMovement : MonoBehaviour
             WallGrab();
         }
 
-        if (Input.GetKeyUp(KeyCode.Z) || Input.GetKey(KeyCode.LeftShift) || !onWall || !canMove)
+        if (Input.GetKeyUp(KeyCode.Z) || Input.GetKeyUp(KeyCode.LeftShift) || !onWall || !canMove)
         {
             wallGrab = false;
             wallSlide = false;

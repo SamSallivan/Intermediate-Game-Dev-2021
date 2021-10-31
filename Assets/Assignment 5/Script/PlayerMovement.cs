@@ -224,7 +224,7 @@ public class PlayerMovement : MonoBehaviour
                     else {
                         if (wallGrab || wallSlide)
                         {
-                            Jump((Vector2.up + Vector2.left), true);
+                            Jump((Vector2.up / 2f + Vector2.left / 2f), true);
                             wallJumped = true;
                         }
                         else
@@ -246,7 +246,7 @@ public class PlayerMovement : MonoBehaviour
                     {
                         if (wallGrab || wallSlide)
                         {
-                            Jump((Vector2.up + Vector2.right), true);
+                            Jump((Vector2.up / 2f + Vector2.right / 2f), true);
                             wallJumped = true;
                         }
                         else
@@ -327,7 +327,7 @@ public class PlayerMovement : MonoBehaviour
                 hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
         }
         //if (Input.GetAxisRaw("Horizontal") < 0)
-        else if (rb.velocity.x < 0.1f)
+        if (rb.velocity.x < 0.1f)
         {
             if (Input.GetAxisRaw("Horizontal") < 0)
                 side = -1;
@@ -336,8 +336,7 @@ public class PlayerMovement : MonoBehaviour
                 hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
         }
 
-
-    }
+        }
 
     private void Walk(float dir)
     {
@@ -345,6 +344,9 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         if (wallGrab)
+            return;
+
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
         if (isCharging || isChargedAttacking)
@@ -366,7 +368,8 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            rb.velocity = Vector2.Lerp(rb.velocity, (new Vector2(dir * walkSpeed/2f, rb.velocity.y)), 10 * Time.deltaTime);
+            rb.velocity = new Vector2(dir * walkSpeed, rb.velocity.y);
+            //rb.velocity = Vector2.Lerp(rb.velocity, (new Vector2(dir * walkSpeed/2f, rb.velocity.y)), 10 * Time.deltaTime);
 
         }
 
@@ -374,6 +377,9 @@ public class PlayerMovement : MonoBehaviour
 
     public void Attack1()
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (!canMove || isAttacking)
             return;
 
@@ -396,6 +402,9 @@ public class PlayerMovement : MonoBehaviour
 
     public void Attack2()
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (!canMove || isAttacking)
             return;
 
@@ -419,6 +428,9 @@ public class PlayerMovement : MonoBehaviour
 
     public void Attack3()
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (!canMove || isAttacking)
             return;
 
@@ -442,6 +454,9 @@ public class PlayerMovement : MonoBehaviour
 
     public void ChargedAttack()
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (!canMove || isAttacking)
             return;
 
@@ -468,8 +483,11 @@ public class PlayerMovement : MonoBehaviour
 
     public void Jump(Vector2 dir, bool wall)
     {
-        //if (!canMove)
-            //return;
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
+        if (!canMove)
+            return;
 
         rb.velocity = new Vector2(0, 0);
         rb.velocity = dir * jumpForce;
@@ -484,6 +502,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void Dash(float x, float y)
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (!canMove)
             return;
 
@@ -507,6 +528,7 @@ public class PlayerMovement : MonoBehaviour
         rb.gravityScale = 0;
         yield return new WaitForSeconds(0.1f);
         //rb.velocity = new Vector2(x, y) * dashSpeed;
+
         RaycastHit2D detection = Physics2D.Raycast(transform.position, new Vector2(Mathf.Sign(x), 0f), dashSpeed, collisionLayer);
         if (detection.collider)
         {
@@ -516,6 +538,7 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.transform.position += new Vector3(x, y, 0) * dashSpeed;
         }
+
         wallJumped = true;
         yield return new WaitForSeconds(0.1f);
         rb.velocity = Vector2.zero;
@@ -530,6 +553,9 @@ public class PlayerMovement : MonoBehaviour
     }
     private void WallGrab()
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (onGround && !(Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S)))
         {
             transform.position = new Vector3(transform.position.x, transform.position.y + 0.05f, transform.position.z);
@@ -543,11 +569,22 @@ public class PlayerMovement : MonoBehaviour
         else if (!onGround && !isDashing && !wallJumped)
             rb.velocity = Vector2.zero;
 
+        Animation("Player_Fall");
+
+        if (Input.GetAxisRaw("Horizontal") > 0)
+            side = 1;
+
+        if (Input.GetAxisRaw("Horizontal") < 0)
+            side = -1;
+
         StartCoroutine(AutoClimb());
     }
 
     private void WallSlide()
     {
+        if (hurtbox.GetComponent<Hurtbox>().isStunned)
+            return;
+
         if (wallSide != side)
             //anim.Flip(side * -1);
 

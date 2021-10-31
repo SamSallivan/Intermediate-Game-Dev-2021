@@ -8,6 +8,8 @@ public class Hurtbox : MonoBehaviour
     public GameObject hitbox;
     public GameObject strawberryManager;
     public Health health;
+    //public Animator animator;
+    //public Animation animationDamaged;
 
     public bool hitted;
     public bool isStunned;
@@ -19,8 +21,10 @@ public class Hurtbox : MonoBehaviour
 
     private void Start()
     {
+        owner = transform.parent.gameObject;
         strawberryManager = GameObject.Find("Strawberry Manager");
         health = owner.GetComponent<Health>();
+        //animator = owner.GetComponent<Animator>();
     }
 
     private void Update()
@@ -31,13 +35,15 @@ public class Hurtbox : MonoBehaviour
             {
                 owner.GetComponent<PlayerMovement>().StartCoroutine(owner.GetComponent<PlayerMovement>().DisableMovement(0.25f));
                 owner.GetComponent<PlayerMovement>().side = (int)Mathf.Sign(-dir.x);
-            }
-            else if (CompareTag("enemy"))
-            {
 
             }
+            //else if (CompareTag("enemy"))
+            //{
 
+            //}
+            Debug.Log("Hit");
             StartCoroutine(Stunned(hitStun));
+
             StartCoroutine(hitRecovery());
 
             if (hitbox.name == "Fall Collider")
@@ -65,6 +71,24 @@ public class Hurtbox : MonoBehaviour
         {
             Time.timeScale = 0.1f;
             owner.GetComponent<PlayerMovement>().Animation("Player_Damaged");
+        }
+        if (owner.name == "Spider")
+        {
+            Time.timeScale = 0.5f;
+            if (!owner.GetComponent <Animator>().GetCurrentAnimatorStateInfo(0).IsName("Spider_Damaged"))
+            {
+                owner.GetComponent<Animator>().Play("Spider_Damaged", 0, 0);
+                //Destroy(owner);
+            }
+        }
+        if (owner.name == "Flower")
+        {
+            Time.timeScale = 0.5f;
+            if (!owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("Flower_Damaged"))
+            {
+                owner.GetComponent<Animator>().Play("Flower_Damaged", 0, 0);
+                //Destroy(owner);
+            }
         }
         else
         {

@@ -8,6 +8,11 @@ public class Hitbox : MonoBehaviour
 
     public GameObject owner;
 
+    private void Start()
+    {
+        owner = transform.parent.gameObject;
+    }
+
     private void OnTriggerStay2D(Collider2D collision)
     {
         if (!collision.gameObject.CompareTag("Hurtbox") || !collision.gameObject.GetComponent<Hurtbox>())

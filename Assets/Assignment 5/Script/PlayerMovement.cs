@@ -10,11 +10,22 @@ public class PlayerMovement : MonoBehaviour
     public LayerMask collisionLayer;
     public GameObject hitbox;
     public GameObject hitboxCharged;
+    public GameObject strawberryManager;
     public GameObject hurtbox;
     public Animator animator;
     //[SerializeField] private Sprite[] WalkSprites;
     //[SerializeField] private Sprite[] JumpSprites;
     //[SerializeField] private Sprite[] IdleSprites;
+
+    public AudioSource audioSource;
+    public AudioClip audioAttack;
+    public AudioClip audioAttackCharged;
+    public AudioClip audioJump;
+    public AudioClip audioDash;
+    public AudioClip audioWalk;
+    public AudioClip audioDamage;
+    public AudioClip audioLand;
+    public AudioClip audioDeath;
 
     [Space]
     [Header("Stats")]
@@ -76,6 +87,8 @@ public class PlayerMovement : MonoBehaviour
         rb = gameObject.GetComponent<Rigidbody2D>();
         myRenderer = gameObject.GetComponent<SpriteRenderer>();
         animator = gameObject.GetComponent<Animator>();
+        strawberryManager = GameObject.Find("Strawberry Manager");
+        audioSource = gameObject.GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
@@ -152,11 +165,12 @@ public class PlayerMovement : MonoBehaviour
     {
         if (onGround && !refreshed && !isDashing)
         {
+            audioSource.PlayOneShot(audioLand);
             Refresh();
             refreshed = true;
         }
 
-        if (refreshed)
+        if (refreshed && (!onGround || hasDashed))
         {
             refreshed = false;
         }
@@ -171,7 +185,7 @@ public class PlayerMovement : MonoBehaviour
         if (Input.GetKey(KeyCode.V) || Input.GetKey(KeyCode.J))
         {
             chargeTimer += Time.deltaTime;
-            if (chargeTimer > 0.25f)
+            if (chargeTimer > 0.25f && !wallGrab)
             {
                 isCharging = true;
                 Animation("Player_Charging");
@@ -179,7 +193,7 @@ public class PlayerMovement : MonoBehaviour
         }
         if (Input.GetKeyUp(KeyCode.V) || Input.GetKeyUp(KeyCode.J))
         {
-            if (chargeTimer <= 0.75f)
+            if (chargeTimer <= 0.75f || strawberryManager.GetComponent<StrawberryManage>().strawberries <= 0)
             {
                 if (attackWindow3)
                 {
@@ -216,20 +230,27 @@ public class PlayerMovement : MonoBehaviour
                 if (onRightWall)
                 {
                     StopCoroutine(DisableMovement(0));
-                    StartCoroutine(DisableMovement(0.1f));
+                    StartCoroutine(DisableMovement(0.15f));
                     if (Input.GetAxisRaw("Horizontal") >= 0 && rb.velocity.y <= 0 && wallGrab)
                     {
-                        Jump((Vector2.up), true);
+                        //Jump((Vector2.up), true);
+
+                        Jump((Vector2.up + Vector2.left / 2f), true);
+                        side = -1;
+
+                        //wallJumped = true;
                     }
                     else {
                         if (wallGrab || wallSlide)
                         {
-                            Jump((Vector2.up / 2f + Vector2.left / 2f), true);
+                            Jump((Vector2.up  + Vector2.left / 2f), true);
+                            side = -1;
                             wallJumped = true;
                         }
                         else
                         {
                             Jump((Vector2.up / 2f + Vector2.left / 2f), true);
+                            side = -1;
                             wallJumped = true;
                         }
                     }
@@ -237,21 +258,27 @@ public class PlayerMovement : MonoBehaviour
                 else if (onLeftWall)
                 {
                     StopCoroutine(DisableMovement(0));
-                    StartCoroutine(DisableMovement(0.1f));
+                    StartCoroutine(DisableMovement(0.15f));
                     if (Input.GetAxisRaw("Horizontal") <= 0 && rb.velocity.y <= 0 && wallGrab)
                     {
-                        Jump((Vector2.up), true);
+                        //Jump((Vector2.up), true);
+
+                        Jump((Vector2.up + Vector2.right / 2f), true);
+                        side = 1;
+                        //wallJumped = true;
                     }
                     else
                     {
                         if (wallGrab || wallSlide)
                         {
-                            Jump((Vector2.up / 2f + Vector2.right / 2f), true);
+                            Jump((Vector2.up  + Vector2.right / 2f), true);
+                            side = 1;
                             wallJumped = true;
                         }
                         else
                         {
                             Jump((Vector2.up / 2f + Vector2.right / 2f), true);
+                            side = 1;
                             wallJumped = true;
                         }
                     }
@@ -287,9 +314,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (onWall && (Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.LeftShift)) && canMove)
         {
-            wallGrab = true;
+            if (!wallGrab)
+            {
+                wallGrab = true;
+                wallJumped = false;
+            }
             wallSlide = false;
-            WallGrab();
+            //WallGrab();
         }
 
         if (Input.GetKeyUp(KeyCode.Z) || Input.GetKeyUp(KeyCode.LeftShift) || !onWall || !canMove)
@@ -318,21 +349,22 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         //if (Input.GetAxisRaw("Horizontal")>0)
-        if (rb.velocity.x > 0.1f)
+        if (rb.velocity.x > 0.1f && Input.GetAxisRaw("Horizontal") > 0)
         {
-            if (Input.GetAxisRaw("Horizontal") > 0)
-                side = 1;
+
+            side = 1;
             hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
             if (!isChargedAttacking)
                 hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
         }
         //if (Input.GetAxisRaw("Horizontal") < 0)
-        if (rb.velocity.x < 0.1f)
+        if (rb.velocity.x < 0.1f && Input.GetAxisRaw("Horizontal") < 0)
         {
-            if (Input.GetAxisRaw("Horizontal") < 0)
-                side = -1;
+
+            side = -1;
             hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
             if (!isChargedAttacking)
+                //hitboxCharged.transform.localScale.x = ;
                 hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
         }
 
@@ -359,10 +391,25 @@ public class PlayerMovement : MonoBehaviour
 
             if (onGround && dir != 0 && !isAttacking && !attackWindow1 && !attackWindow2 && !attackWindow3 && !attackWindow4 && !isCharging && !isDashing)
             {
+                if (audioSource.clip != audioWalk && onGround)
+                {
+                    audioSource.clip = audioWalk;
+                    audioSource.Play();
+                }
+                else if (!onGround)
+                {
+                    audioSource.Stop();
+                    audioSource.clip = null;
+                }
                 Animation("Player_Run");
             }
             else if (onGround && dir == 0 && !isAttacking && !attackWindow1 && !attackWindow2 && !attackWindow3 && !attackWindow4 && !isCharging && !isDashing)
             {
+                if (audioSource.clip == audioWalk)
+                {
+                    audioSource.Stop();
+                    audioSource.clip = null;
+                }
                 Animation("Player_Idle");
             }
         }
@@ -380,18 +427,20 @@ public class PlayerMovement : MonoBehaviour
         if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
-        if (!canMove || isAttacking)
+        if (!canMove || isAttacking || wallGrab)
             return;
 
         hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
-        hitbox.SetActive(true);
         Animation("Player_Attack_1");
         StartCoroutine(Attacking1());
     }
     IEnumerator Attacking1()
     {
+        audioSource.PlayOneShot(audioAttack);
         isAttacking = true;
-        yield return new WaitForSeconds(0.25f);
+        yield return new WaitForSeconds(0.125f);
+        hitbox.SetActive(true);
+        yield return new WaitForSeconds(0.125f);
         hitbox.SetActive(false);
         yield return new WaitForSeconds(attackLag);
         isAttacking = false;
@@ -405,19 +454,22 @@ public class PlayerMovement : MonoBehaviour
         if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
-        if (!canMove || isAttacking)
+        if (!canMove || isAttacking || wallGrab)
             return;
 
         hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
-        hitbox.SetActive(true);
+        //hitbox.SetActive(true);
         Animation("Player_Attack_2");
         StartCoroutine(Attacking2());
     }
     IEnumerator Attacking2()
     {
+        audioSource.PlayOneShot(audioAttack);
         attackWindow2 = false;
         isAttacking = true;
-        yield return new WaitForSeconds(0.25f);
+        yield return new WaitForSeconds(0.125f);
+        hitbox.SetActive(true);
+        yield return new WaitForSeconds(0.125f);
         hitbox.SetActive(false);
         yield return new WaitForSeconds(attackLag);
         isAttacking = false;
@@ -431,19 +483,22 @@ public class PlayerMovement : MonoBehaviour
         if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
-        if (!canMove || isAttacking)
+        if (!canMove || isAttacking || wallGrab)
             return;
 
         hitbox.transform.position = transform.position + new Vector3(side * 2, 0, 0);
-        hitbox.SetActive(true);
+        //hitbox.SetActive(true);
         Animation("Player_Attack_3");
         StartCoroutine(Attacking3());
     }
     IEnumerator Attacking3()
     {
+        audioSource.PlayOneShot(audioAttack);
         attackWindow3 = false;
         isAttacking = true;
-        yield return new WaitForSeconds(0.25f);
+        yield return new WaitForSeconds(0.125f);
+        hitbox.SetActive(true);
+        yield return new WaitForSeconds(0.125f);
         hitbox.SetActive(false);
         yield return new WaitForSeconds(attackLag);
         isAttacking = false;
@@ -457,7 +512,7 @@ public class PlayerMovement : MonoBehaviour
         if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
-        if (!canMove || isAttacking)
+        if (!canMove || isAttacking || wallGrab)
             return;
 
         hitboxCharged.transform.position = transform.position + new Vector3(side * 5, 1.0f, 0);
@@ -465,11 +520,13 @@ public class PlayerMovement : MonoBehaviour
     }
     IEnumerator ChargedAttacking()
     {
+        audioSource.PlayOneShot(audioAttackCharged);
         yield return new WaitForSeconds(0.1f);
         isChargedAttacking = true;
         isAttacking = true;
         hitboxCharged.SetActive(true);
         Animation("Player_Attack_Charged");
+        strawberryManager.GetComponent<StrawberryManage>().strawberries -= 1;
         yield return new WaitForSeconds(0.5f);
         hitboxCharged.SetActive(false);
         yield return new WaitForSeconds(attackLag);
@@ -486,11 +543,23 @@ public class PlayerMovement : MonoBehaviour
         if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
-        if (!canMove)
-            return;
+        //if (!canMove)
+            //return;
 
         rb.velocity = new Vector2(0, 0);
+
+        if (wallJumped)
+        {
+            //rb.velocity = dir * jumpForce/2;
+        }
+        else
+        {
+            //rb.velocity = dir * jumpForce;
+        }
+
         rb.velocity = dir * jumpForce;
+
+        audioSource.PlayOneShot(audioJump);
         //StartCoroutine(Jumping());
     }
     IEnumerator Jumping()
@@ -520,6 +589,7 @@ public class PlayerMovement : MonoBehaviour
 
     IEnumerator Dashing(float x, float y)
     {
+        audioSource.PlayOneShot(audioDash);
         if (onGround)
         {
             //hasDashed = false;
@@ -553,6 +623,8 @@ public class PlayerMovement : MonoBehaviour
     }
     private void WallGrab()
     {
+        rb.gravityScale = 0;
+
         if (hurtbox.GetComponent<Hurtbox>().isStunned)
             return;
 
@@ -561,21 +633,22 @@ public class PlayerMovement : MonoBehaviour
             transform.position = new Vector3(transform.position.x, transform.position.y + 0.05f, transform.position.z);
         }
 
-        rb.gravityScale = 0;
         if (Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W))
             rb.velocity = new Vector2(rb.velocity.x, walkSpeed * 1.0f);
         else if (Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S))
             rb.velocity = new Vector2(rb.velocity.x, walkSpeed * -1.25f);
         else if (!onGround && !isDashing && !wallJumped)
             rb.velocity = Vector2.zero;
+        //else if (wallJumped)
+            //rb.gravityScale *= gravityScaler;
 
         Animation("Player_Fall");
 
-        if (Input.GetAxisRaw("Horizontal") > 0)
-            side = 1;
+        //if (Input.GetAxisRaw("Horizontal") > 0)
+            //side = 1;
 
-        if (Input.GetAxisRaw("Horizontal") < 0)
-            side = -1;
+        //if (Input.GetAxisRaw("Horizontal") < 0)
+            //side = -1;
 
         StartCoroutine(AutoClimb());
     }
@@ -594,6 +667,10 @@ public class PlayerMovement : MonoBehaviour
         bool pushingWall = false;
         if ((Input.GetAxisRaw("Horizontal") > 0 && onRightWall) || (Input.GetAxisRaw("Horizontal") < 0 && onLeftWall))
         {
+            if (onRightWall && !isDashing)
+                side = -1;
+            if (onLeftWall && !isDashing)
+                side = 1;
             pushingWall = true;
         }
         float push = pushingWall ? 0 : rb.velocity.x;

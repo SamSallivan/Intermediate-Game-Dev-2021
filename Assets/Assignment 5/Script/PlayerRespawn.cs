@@ -8,6 +8,7 @@ public class PlayerRespawn : MonoBehaviour
     Rigidbody2D myBody;
     SpriteRenderer myRenderer;
     Health health;
+    public int batteries = 0;
     bool respawned;
 
     public Vector2 CheckPoint = new Vector2(-13, -5);
@@ -22,6 +23,7 @@ public class PlayerRespawn : MonoBehaviour
     {
         if (health.dead && !respawned)
         {
+            GetComponent<PlayerMovement>().audioSource.PlayOneShot(GetComponent<PlayerMovement>().audioDeath);
             GetComponent<PlayerMovement>().Animation("Player_Death");
             StartCoroutine(Respawn());
             respawned = true;
@@ -31,7 +33,8 @@ public class PlayerRespawn : MonoBehaviour
     IEnumerator Respawn()
     {
         yield return new WaitForSeconds(1.0f);
-        Color tmp = GetComponent<SpriteRenderer>().color;
+        Color tmp = GetComponent<SpriteRenderer>().color; 
+        GameObject.Find("Strawberry Manager").GetComponent<StrawberryManage>().strawberries = batteries;
         tmp.a = 0.25f;
         GetComponent<SpriteRenderer>().color = tmp;
         yield return new WaitForSeconds(0.75f);
@@ -48,6 +51,7 @@ public class PlayerRespawn : MonoBehaviour
         GetComponent<SpriteRenderer>().color = tmp;
         health.invincible = false;
         respawned = false;
+        GameObject.Find("Blood King").GetComponent<Health>().HealthPoint = 20;
     }
 
 }

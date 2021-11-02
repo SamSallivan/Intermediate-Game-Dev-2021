@@ -13,8 +13,10 @@ public class Hurtbox : MonoBehaviour
 
     public bool hitted;
     public bool isStunned;
-    public float hitCD;
+    public float hitCD = 0.5f;
     public float hitStun = 0.5f;
+    float stunCounter = 0;
+    float invincibleCounter = 0;
     public Vector2 dir;
 
     public Rigidbody2D Rigidbody2D;
@@ -31,33 +33,81 @@ public class Hurtbox : MonoBehaviour
     {
         if (hitted)
         {
+            AudioSource.PlayClipAtPoint(GameObject.Find("Madeline").GetComponent<PlayerMovement>().audioDamage, transform.position, 1);
+
+            StartCoroutine(Stunned(hitStun));
+            StartCoroutine(hitRecovery());
+
             if (owner.name == "Madeline")
             {
                 owner.GetComponent<PlayerMovement>().StartCoroutine(owner.GetComponent<PlayerMovement>().DisableMovement(0.25f));
                 owner.GetComponent<PlayerMovement>().side = (int)Mathf.Sign(-dir.x);
 
             }
-            //else if (CompareTag("enemy"))
-            //{
 
-            //}
-            Debug.Log("Hit");
-            StartCoroutine(Stunned(hitStun));
+            if (owner.name == "Blood King") 
+            {
+                if (owner.GetComponent<BloodKingMovement>().isSlashing)
+                {
+                    owner.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+                    //owner.GetComponent<Rigidbody2D>().velocity = new Vector2(Mathf.Sign(dir.x) * 10.0f, Mathf.Sign(dir.y + 1) * 10.0f);
+                    return;
+                }
+            }
 
-            StartCoroutine(hitRecovery());
+            /*
+            owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Slash") ||
+            owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Slam") ||
+            owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Dodge") ||
+            owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Finish"))
+            */
 
             if (hitbox.name == "Fall Collider")
                 return;
 
             owner.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
-            owner.GetComponent<Rigidbody2D>().velocity = new Vector2(Mathf.Sign(dir.x) * 15.0f, Mathf.Sign(dir.y+1) * 20.0f);
+            owner.GetComponent<Rigidbody2D>().velocity = new Vector2(Mathf.Sign(dir.x) * 20.0f, Mathf.Sign(dir.y+1) * 20.0f);
 
         }
+
+        if (isStunned)
+        {
+            stunCounter++;
+            if (stunCounter >= hitStun * 300)
+                isStunned = false;
+        }
+        else
+        {
+            stunCounter = 0;
+        }
+
+        if (health.invincible)
+        {
+            invincibleCounter++;
+            if (invincibleCounter >= hitCD * 300)
+                health.invincible = false;
+        }
+        else
+        {
+            invincibleCounter = 0;
+        }
+
     }
 
     IEnumerator Stunned(float time)
     {
-        isStunned = true;
+        //if (!isStunned)
+        if (owner.name == "Blood King")
+        {
+            if (!owner.GetComponent<BloodKingMovement>().isSlashing)
+            {
+                isStunned = true;
+            }
+        }
+        else
+        {
+            isStunned = true;
+        }
         yield return new WaitForSeconds(time);
         isStunned = false;
     }
@@ -65,6 +115,10 @@ public class Hurtbox : MonoBehaviour
     IEnumerator hitRecovery()
     {
         hitted = false;
+
+        //if (!health.invincible)
+        health.invincible = true;
+
         Color tmp = owner.GetComponent<SpriteRenderer>().color;
 
         if (owner.name == "Madeline")
@@ -72,33 +126,50 @@ public class Hurtbox : MonoBehaviour
             Time.timeScale = 0.1f;
             owner.GetComponent<PlayerMovement>().Animation("Player_Damaged");
         }
+
         if (owner.name == "Spider")
         {
             Time.timeScale = 0.5f;
             if (!owner.GetComponent <Animator>().GetCurrentAnimatorStateInfo(0).IsName("Spider_Damaged"))
             {
                 owner.GetComponent<Animator>().Play("Spider_Damaged", 0, 0);
-                //Destroy(owner);
             }
         }
+
         if (owner.name == "Flower")
         {
             Time.timeScale = 0.5f;
             if (!owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("Flower_Damaged"))
             {
                 owner.GetComponent<Animator>().Play("Flower_Damaged", 0, 0);
-                //Destroy(owner);
             }
         }
-        else
+
+        if (owner.name == "Blood King")
         {
             Time.timeScale = 0.5f;
-            tmp.a = 0.25f;
-            owner.GetComponent<SpriteRenderer>().color = tmp;
+            if (!owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Damaged"))
+            {
+                
+                if (//!owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Slash") && 
+                    !owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Slam") && 
+                    !owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Dodge") && 
+                    !owner.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Finish"))
+                {
+                
+                    owner.GetComponent<Animator>().Play("BloodKing_Damaged", 0, 0);
+                }
+                else
+                {
+                    owner.GetComponent<SpriteRenderer>().color = Color.red;
+                }
+            }
+            owner.GetComponent<BloodKingMovement>().hitbox.SetActive(false);
+            owner.GetComponent<BloodKingMovement>().hitboxSlash.SetActive(false);
+            owner.GetComponent<BloodKingMovement>().hitboxSlam.SetActive(false);
+            owner.GetComponent<BloodKingMovement>().hitboxDodge.SetActive(false);
+            owner.GetComponent<BloodKingMovement>().hitboxFinish.SetActive(false);
         }
-
-
-        health.invincible = true;
 
         yield return new WaitForSeconds(0.05f);
 
@@ -121,7 +192,8 @@ public class Hurtbox : MonoBehaviour
         if (owner.name == "Madeline" && collision.gameObject.tag == "Strawberry")
         {
             Destroy(collision.gameObject);
-            strawberryManager.GetComponent<StrawberryManage>().strawberries++;
+            if (strawberryManager.GetComponent<StrawberryManage>().strawberries <5)
+                strawberryManager.GetComponent<StrawberryManage>().strawberries++;
         }
 
         if (collision.gameObject.name == "Fall Collider")

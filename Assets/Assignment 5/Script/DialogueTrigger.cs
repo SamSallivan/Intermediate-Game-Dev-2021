@@ -64,7 +64,7 @@ public class DialogueTrigger : MonoBehaviour
         {
             
 
-            if (Input.GetKeyDown(KeyCode.Z))
+            if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
             {
                 //FindObjectOfType<playerMovement>().canMove = false;
                 talked = true;

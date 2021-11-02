@@ -55,6 +55,7 @@ public class Enemy00Movement : MonoBehaviour
 
         if (!health.dead && !isStunned)
         {
+            hitbox.SetActive(true);
             distanceX = Mathf.Abs(gameObject.transform.position.x - initialX);
             if ((distanceX > maxDistanceX) && (Mathf.Sign(gameObject.transform.position.x - initialX) == Mathf.Sign(side))) //speed and direction consistant
             {

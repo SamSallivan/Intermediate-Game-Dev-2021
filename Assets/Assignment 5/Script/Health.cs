@@ -23,11 +23,11 @@ public class Health : MonoBehaviour
 
 	private void Update()
 	{
-		if (HealthPoint <= 0 && !dead)
+		if (HealthPoint <= 0)
 		{
-			dead = true;
 			if (name == "Madeline")
 			{
+				dead = true;
 				GetComponent<PlayerMovement>().canMove = false;
 				GetComponent<PlayerMovement>().Animation("Player_Death");
 			}
@@ -37,7 +37,8 @@ public class Health : MonoBehaviour
 				{
 					GetComponent<Animator>().Play("Spider_Death", 0, 0);
 				}
-				StartCoroutine(DelayedDeath(1.0f));
+				if (!dead)
+					StartCoroutine(DelayedDeath(1.0f));
 			}
 			else if (name == "Flower")
 			{
@@ -45,7 +46,17 @@ public class Health : MonoBehaviour
 				{
 					GetComponent<Animator>().Play("Flower_Death", 0, 0);
 				}
-				StartCoroutine(DelayedDeath(1.0f));
+				if (!dead)
+					StartCoroutine(DelayedDeath(1.0f));
+			}
+			else if (name == "Blood King")
+			{
+				if (!GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("BloodKing_Death"))
+				{
+					GetComponent<Animator>().Play("BloodKing_Death", 0, 0);
+				}
+				if (!dead)
+					StartCoroutine(DelayedDeath(1.0f));
 			}
 
 			else
@@ -66,6 +77,7 @@ public class Health : MonoBehaviour
 
 	IEnumerator DelayedDeath(float delay)
 	{
+		dead = true;
 		yield return new WaitForSeconds(delay);
 		Instantiate(GameObject.Find("Strawberry"), transform.position + new Vector3(Random.Range(-1,1), Random.Range(1, 2)), Quaternion.identity);
 		//Destroy(gameObject);

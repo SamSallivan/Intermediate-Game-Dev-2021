@@ -11,6 +11,7 @@ TagManager:
   - Strawberry
   - Hitbox
   - Hurtbox
+  - Grid_System
   layers:
   - Default
   - TransparentFX
